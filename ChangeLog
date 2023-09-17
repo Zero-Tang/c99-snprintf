@@ -1,3 +1,8 @@
+2023-09-17	Zero Tang <zero.tang@columbia.edu>
+
+	* snprintf.c: Revise for Project NoirVisor.
+	*: Removed files unnecessary for Project NoirVisor.
+
 2008-01-20  Holger Weiss <holger@jhweiss.de>
 
 	* configure.ac, snprintf.c: Release 1.1.

@@ -163,6 +163,9 @@
  * <http://www.jhweiss.de/software/snprintf.html>.
  */
 
+// Dummy variable for the sake of using floating numbers.
+int _fltused=0;
+
 #if HAVE_CONFIG_H
 #include <config.h>
 #endif	/* HAVE_CONFIG_H */
@@ -320,7 +323,6 @@ static void *mymemcpy(void *, void *, size_t);
 #endif	/* !HAVE_VASPRINTF */
 
 #if !HAVE_VSNPRINTF
-#include <errno.h>	/* For ERANGE and errno. */
 #include <limits.h>	/* For *_MAX. */
 #if HAVE_FLOAT_H
 #include <float.h>	/* For *DBL_{MIN,MAX}_10_EXP. */
@@ -415,7 +417,7 @@ static void *mymemcpy(void *, void *, size_t);
 #if HAVE_UINTPTR_T || defined(uintptr_t)
 #define UINTPTR_T uintptr_t
 #else
-#define UINTPTR_T unsigned long int
+#define UINTPTR_T unsigned long long int
 #endif	/* HAVE_UINTPTR_T || defined(uintptr_t) */
 #endif	/* !defined(UINTPTR_T) */
 
@@ -530,8 +532,6 @@ static int convert(UINTMAX_T, char *, size_t, int, int);
 static UINTMAX_T cast(LDOUBLE);
 static UINTMAX_T myround(LDOUBLE);
 static LDOUBLE mypow10(int);
-
-extern int errno;
 
 int
 rpl_vsnprintf(char *str, size_t size, const char *format, va_list args)
@@ -831,14 +831,20 @@ rpl_vsnprintf(char *str, size_t size, const char *format, va_list args)
 				 * characters, in an implementation-defined
 				 * manner." (C99: 7.19.6.1, 8)
 				 */
-				if ((strvalue = va_arg(args, void *)) == NULL)
+				strvalue=va_arg(args,void*);
+				value=(INTMAX_T)strvalue;
+#if defined(USE_STRING_FOR_NULL_PTR)
+				// Kill the string representation for NULL pointers.
+				if (strvalue == NULL)
 					/*
 					 * We use the glibc format.  BSD prints
 					 * "0x0", SysV "0".
 					 */
 					fmtstr(str, &len, size, "(nil)", width,
 					    -1, flags);
-				else {
+				else
+#endif
+				{
 					/*
 					 * We use the BSD/glibc format.  SysV
 					 * omits the "0x" prefix (which we emit
@@ -846,9 +852,10 @@ rpl_vsnprintf(char *str, size_t size, const char *format, va_list args)
 					 */
 					flags |= PRINT_F_NUM;
 					flags |= PRINT_F_UNSIGNED;
+					// Note: Project NoirVisor requires %p to have a full, rather than default, precision.
 					fmtint(str, &len, size,
-					    (UINTPTR_T)strvalue, 16, width,
-					    precision, flags);
+					    value, 16, width,
+					    sizeof(void*)*2, flags);
 				}
 				break;
 			case 'n':
@@ -913,7 +920,6 @@ out:
 		str[size - 1] = '\0';
 
 	if (overflow || len > INT_MAX) {
-		errno = EOVERFLOW;
 		return -1;
 	}
 	return (int)len;
@@ -997,7 +1003,8 @@ fmtint(char *str, size_t *len, size_t size, INTMAX_T value, int base, int width,
 				precision = pos + 1;
 			break;
 		case 16:
-			hexprefix = (flags & PRINT_F_UP) ? 'X' : 'x';
+			// hexprefix = (flags & PRINT_F_UP) ? 'X' : 'x';
+			hexprefix=0;
 			break;
 		}
 	}

@@ -1,3 +1,8 @@
+2024-01-10	Zero Tang <zero.tang@columbia.edu>
+
+	* snprintf.c: Fix warnings.
+	* build.bat: Remove warning suppressor.
+
 2023-09-17	Zero Tang <zero.tang@columbia.edu>
 
 	* snprintf.c: Revise for Project NoirVisor.
